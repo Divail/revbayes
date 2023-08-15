@@ -661,7 +661,49 @@ RevPtr<RevVariable> AbstractHomologousDiscreteCharacterData::executeMethod(std::
                 }
             }
         }
+        else if (name == "partitionData")
+        {
+            found = true;
+        
+            const RevObject& argument = args[0].getVariable()->getRevObject();
+            RevBayesCore::AbstractHomologousDiscreteCharacterData &v = dag_node->getValue();
+            
+            // Specify the maximum number of character states
+            int maxStates = v.getNumStates();
+        
+            // Partition the data matrix by state space size
+            std::vector<DataMatrix> partitions;
+            for (int stateSpaceSize = 2; stateSpaceSize <= maxStates; ++stateSpaceSize) {
+                DataMatrix partition = v.getPartition(stateSpaceSize);
+                partitions.push_back(partition);
+            }
+        
+            std::vector<double> clampRates; // Fill this vector with appropriate min and max rates
+        
+            // Loop through each partitioned matrix and perform clamping
+            for (DataMatrix& partition : partitions) {
+                int numCharacters = partition.getNumCharacters();
+        
+                for (int i = 0; i < numCharacters; ++i) {
+                    PhyloCTMC ctmc;
+        
+                   
+                    std::vector<double> characterData = partition.getCharacterData(i);
+        
+                    // Populate the PhyloCTMC object with the character data
+                    for (double rate : characterData) {
+                        ctmc.addRate(rate);
+                    }
+        
+                    // Clamp the rates within the specified range for the PhyloCTMC object
+                    ctmc.clampData(clampRates);
+        
+                    ctmcVector.push_back(ctmc); // Add the PhyloCTMC object to the vector
+                }
+            }
+        }
 
+        
         if ( warn == true )
         {
             std::stringstream ss;
